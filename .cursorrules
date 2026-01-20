@@ -1,0 +1,215 @@
+# Database Explorer - Static Context (Rules)
+
+## Project Overview
+
+**Purpose**: Admin tool for viewing and exploring the PostgreSQL database from the Litecoin OpenSource Fund project. Provides read-only access to donation data and other database tables.
+
+**Tech Stack**:
+- Next.js 15 (App Router)
+- TypeScript
+- PostgreSQL (direct connection via `pg` library)
+- Tailwind CSS
+- Prisma (for schema introspection, not for queries)
+
+**Key Relationships**:
+- Connects to the same database as `litecoin-fund`
+- Read-only access (safe for production)
+- Admin-only tool (no public access)
+
+## Access Patterns
+
+### Read-Only Design
+
+**Safety**:
+- No write operations (no INSERT, UPDATE, DELETE)
+- Only SELECT queries
+- Safe to use in production environment
+
+### Database Connection
+
+**Connection String**:
+- Uses `DATABASE_URL` environment variable
+- Same database as main Litecoin OpenSource Fund project
+- Can use `POSTGRES_URL_NON_POOLING` or `POSTGRES_PRISMA_URL` from legacy project
+
+**Connection Setup**:
+- Direct PostgreSQL connection (not through Prisma client)
+- Uses `pg` library for maximum flexibility
+- Connection pool managed by `lib/prisma.ts` (despite name, uses `pg` directly)
+
+## Project Structure
+
+```
+app/
+├── api/
+│   └── tables/        # API routes for fetching table data
+├── layout.tsx         # Root layout
+└── page.tsx           # Main explorer page
+
+components/
+├── TableList.tsx      # Sidebar table list component
+└── TableViewer.tsx    # Table data viewer component
+
+lib/
+└── prisma.ts          # PostgreSQL connection pool
+```
+
+## Features
+
+### Table Browsing
+
+**Functionality**:
+- Lists all tables in the database
+- Shows row counts for each table
+- Click to view table data
+
+### Data Viewing
+
+**Pagination**:
+- 50 rows per page (for performance)
+- Navigation controls at bottom
+- Handles large datasets efficiently
+
+### Column Information
+
+**Metadata Display**:
+- Column names
+- Data types
+- Nullability
+- Displayed in table header
+
+## Code Patterns
+
+### Database Query Pattern
+
+```typescript
+import { pool } from '@/lib/prisma'
+
+const result = await pool.query('SELECT * FROM table_name LIMIT $1 OFFSET $2', [
+  limit,
+  offset,
+])
+```
+
+### API Route Pattern
+
+```typescript
+// app/api/tables/[tableName]/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { pool } from '@/lib/prisma'
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { tableName: string } }
+) {
+  try {
+    const { searchParams } = request.nextUrl
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = 50
+    const offset = (page - 1) * limit
+
+    const result = await pool.query(
+      `SELECT * FROM ${params.tableName} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    )
+
+    return NextResponse.json({
+      data: result.rows,
+      page,
+      limit,
+    })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
+  }
+}
+```
+
+### Table List Query
+
+```typescript
+const result = await pool.query(`
+  SELECT 
+    table_name,
+    (SELECT COUNT(*) FROM information_schema.columns 
+     WHERE table_name = t.table_name) as column_count
+  FROM information_schema.tables t
+  WHERE table_schema = 'public'
+  ORDER BY table_name
+`)
+```
+
+## Environment Variables
+
+**Required**:
+- `DATABASE_URL` - PostgreSQL connection string
+
+**Example**:
+```env
+DATABASE_URL="postgres://default:password@ep-morning-frog-a48gjgxz.us-east-1.aws.neon.tech/verceldb?sslmode=require"
+```
+
+**Note**: Can use connection URL from `Litecoin-OpenSource-Fund/.env.local`:
+- `POSTGRES_URL_NON_POOLING` (preferred for better performance)
+- `POSTGRES_PRISMA_URL`
+
+## Security Considerations
+
+### Read-Only Access
+
+**Implementation**:
+- No write operations in code
+- Database user should have SELECT-only permissions (if possible)
+- No authentication/authorization in current implementation (assumes admin-only deployment)
+
+### SQL Injection Prevention
+
+**Best Practices**:
+- Use parameterized queries (`$1`, `$2`, etc.)
+- Validate table names against allowed list
+- Sanitize user input
+
+## Performance
+
+### Optimization
+
+**Pagination**:
+- Limits result sets to 50 rows
+- Reduces memory usage
+- Improves load times
+
+**Connection Pooling**:
+- Uses connection pool for efficiency
+- Reuses connections
+- Prevents connection exhaustion
+
+## Troubleshooting
+
+### Connection Errors
+
+**Common Issues**:
+1. Verify `DATABASE_URL` is correct in `.env.local`
+2. Check database server accessibility
+3. Ensure SSL mode is set correctly (`sslmode=require` for Neon databases)
+
+### No Tables Showing
+
+**Possible Causes**:
+1. Database permissions issue
+2. Wrong database connection
+3. Check browser console for errors
+
+## Key Files
+
+- [README.md](README.md) - Project documentation
+- `lib/prisma.ts` - Database connection pool
+- `components/TableList.tsx` - Table list sidebar
+- `components/TableViewer.tsx` - Table data viewer
+
+## Notes
+
+- This is a read-only tool - no data modification capabilities
+- Designed for admin use only
+- Uses direct SQL queries for maximum flexibility
+- Connection uses same database as main project
+- Update rules immediately when patterns change or AI fails at a task
+- For deployment workflows, see `.cursor/skills/` directory

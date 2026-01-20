@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Database Explorer
 
-## Getting Started
+A Next.js application for exploring and browsing your PostgreSQL database from the Litecoin OpenSource Fund project.
 
-First, run the development server:
+## Features
+
+- 📊 Browse all database tables
+- 🔍 View table data with pagination
+- 📋 See column types and metadata
+- 🎨 Clean, modern UI
+- ⚡ Fast and responsive
+- 🔒 Read-only access (safe for production)
+
+## Setup
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure Database Connection
+
+Create a `.env.local` file in the root directory:
+
+```bash
+DATABASE_URL="postgres://default:password@ep-morning-frog-a48gjgxz.us-east-1.aws.neon.tech/verceldb?sslmode=require"
+```
+
+You can get the connection URL from the `Litecoin-OpenSource-Fund/.env.local` file. Use either:
+- `POSTGRES_URL_NON_POOLING` (preferred for better performance)
+- `POSTGRES_PRISMA_URL`
+- Or construct from individual components
+
+### 3. Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the database explorer.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Browse Tables**: The left sidebar shows all available tables with their row counts
+2. **View Data**: Click on any table to view its data
+3. **Navigate**: Use pagination controls at the bottom to browse through large datasets
+4. **Column Info**: Column names, types, and nullability are displayed in the table header
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+litecoin-fund-explorer/
+├── app/
+│   ├── api/
+│   │   └── tables/        # API routes for fetching table data
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Main explorer page
+├── components/
+│   ├── TableList.tsx      # Sidebar table list component
+│   └── TableViewer.tsx    # Table data viewer component
+└── lib/
+    └── prisma.ts          # PostgreSQL connection pool
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Technology Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Next.js 15** - React framework
+- **PostgreSQL** - Direct connection using `pg` library
+- **Tailwind CSS** - Styling
+- **TypeScript** - Type safety
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- This tool is **read-only** - it doesn't allow editing or deleting data
+- Large tables are paginated (50 rows per page) to improve performance
+- The connection uses the same database as the main Litecoin-OpenSource-Fund project
+- Uses direct SQL queries for maximum flexibility
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Troubleshooting
+
+### Connection Error
+
+If you see a connection error:
+1. Verify your `DATABASE_URL` is correct in `.env.local`
+2. Check that the database server is accessible
+3. Ensure SSL mode is set correctly (`sslmode=require` for Neon databases)
+
+### No Tables Showing
+
+If no tables appear:
+1. Check database permissions
+2. Verify you're connected to the correct database
+3. Check the browser console for errors
+
+## Development
+
+To build for production:
+
+```bash
+npm run build
+npm start
+```
